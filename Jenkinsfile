@@ -11,7 +11,8 @@ def isFolderExist(folderName) {
 }
 
 def loadFiles(filePattern,excludes="") {
-    return findFiles(glob: "${filePattern}", excludes: "${excludes}")
+    def files = sh(script: "find ${WORKSPACE} -name '${filePattern}'",returnStdout: true)
+    return files.split("\n")
 }
 
 def listOfFiles
@@ -53,10 +54,10 @@ pipeline {
                         currentBuild.result = 'FAILURE'
                         error("Job failure to due to integration folder doesn't exist.")
                     }
-                    listOfFiles = loadFiles("**/${INTEGRATION_FOLDER}/${INTEGRATION_FILE_PATTERN}")
+                    listOfFiles = loadFiles("${INTEGRATION_FILE_PATTERN}")
                     println "List of fileName"
-                    listOfFiles.each { String fileMetaData ->
-                        println "${fileMetaData.name}"
+                    listOfFiles.each { String  fileMetaData ->
+                        sh "basename ${fileMetaData}"
                     }
                 }
             }
@@ -70,12 +71,15 @@ pipeline {
                 script {
                     failedScript = false 
                     listOfFiles.each { String fileMetaData ->
-                        println "Executing ${fileMetaData.name}"
+                        fileMetaData = fileMetaData.trim()
+                        println "Executing ${fileMetaData}"
+                        fileName = sh(script: "basename ${fileMetaData}",returnStdout: true)
+                        fileName = fileName.trim()
                         def jcl = """
                             HELLO  JOB ,
                             MSGCLASS=H,MSGLEVEL=(1,1),TIME=(,4),REGION=0M
                             STEP0001 EXEC PGM=IEBGENER
-                            SYSIN    DD ${WORKSPACE}/${fileMetaData.path}
+                            SYSIN    DD ${fileName}
                             SYSPRINT DD ${APPLICATION_LOAD_VALUE}
                             SYSUT2   DD SYSOUT=*
                         """   
@@ -84,7 +88,11 @@ pipeline {
                             // jclExec.saveOutput('SYSPRINT',  new File("${WORKSPACE}/output/${fileMetaData.name}_sysprint.out"), "UTF-8")                                             
                             
                             //For Testing Output
-                            writeFile file: "${WORKSPACE}/${SYSOUT_FOLDER}/${fileMetaData.name}_sysprint.out", text: "${jcl}"
+                            // writeFile file: "${WORKSPACE}/${SYSOUT_FOLDER}/${fileMetaData.name}_sysprint.out", text: "${jcl}"
+                            sh """
+                                touch ${WORKSPACE}/${SYSOUT_FOLDER}/${fileName}_sysprint.out
+                                echo '${jcl}' > ${WORKSPACE}/${SYSOUT_FOLDER}/${fileName}_sysprint.out
+                            """
                         }catch(err) {
                             failedScript = true
                             println "${err}"
@@ -107,10 +115,9 @@ pipeline {
                         currentBuild.result = 'FAILURE'
                         error("Job failure to due to sys out folder doesn't exist.")                        
                     }
-                    listOfSysOutFiles = loadFiles("**/${SYSOUT_FOLDER}/${SYSOUT_FILE_PATTERN}")
+                    listOfSysOutFiles = loadFiles("${SYSOUT_FILE_PATTERN}")
                     listOfSysOutFiles.each { String fileMetaData ->
-                        def sysOut = readFile file: "${WORKSPACE}/${fileMetaData.path}", encoding: "UTF-8"
-                        println sysOut
+                        sh "cat ${fileMetaData}"
                     }
                 }
             }
