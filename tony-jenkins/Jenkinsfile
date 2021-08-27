@@ -7,7 +7,7 @@
 // import groovy.util.XmlParser
 // import groovy.util.XmlSlurper
 
-def INTEGRATION_FOLDER = "base/integration-test-case" 
+def INTEGRATION_FOLDER = "tony-jenkins/base/integration-test-case" 
 def INTEGRATION_FILE_PATTERN = "*.json"
 
 def SYSOUT_FOLDER = "output" 
