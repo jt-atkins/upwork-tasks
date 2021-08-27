@@ -1,3 +1,5 @@
+def JCL_EXEC_GROOVY_SCRIPT_LOCATION="${WORKSPACE}/tony-jenkins"
+
 def INTEGRATION_FOLDER = "tony-jenkins/base/integration-test-case" 
 def INTEGRATION_FILE_PATTERN = "*.json"
 
@@ -74,7 +76,6 @@ pipeline {
             }            
             steps {
                 script {
-                    failedScript = false 
                     listOfFiles.each { fileMetaData ->
                         println "Executing ${fileMetaData.path}"
                         try {
@@ -85,7 +86,6 @@ pipeline {
                                 def testCaseDescription = testCase.description
                                 def testedPrograms = []
                                 testCase.transactions.each { tx ->
-                                    println tx
                                     testedPrograms.addAll(tx.programs)
                                 }
                                 println "TestCaseName : ${testCaseName}"
@@ -94,15 +94,13 @@ pipeline {
                                 println "TestedPrograms : ${testedPrograms}"
                                 println "ApplicationLoadValue : ${APPLICATION_LOAD_VALUE}"
                                 println "UserLoadValue : ${USER_LOAD_VALUE}"
+                                groovyz "${JCL_EXEC_GROOVY_SCRIPT_LOCATION}/jclexec.groovy -p ${testCaseFile} -c ${WORKSPACE} -l ${APPLICATION_LOAD_VALUE} -w ${WORKSPACE}/${SYSOUT_FOLDER}"  
                             }
                         }catch(err) {
-                            failedScript = true
                             println "${err}"
                         }
                    }
-                    if(!failedScript) {
-                        stash includes: "**/${SYSOUT_FOLDER}/**", name: 'sysoutput'                               
-                    }              
+                    stash includes: "**/${SYSOUT_FOLDER}/**", name: 'sysoutput',allowEmpty: true                          
                 }
             }
         }        
@@ -119,7 +117,7 @@ pipeline {
                         error("Job failure to due to sys out folder doesn't exist.")                        
                     }
                     listOfSysOutFiles = loadFiles("**/${SYSOUT_FOLDER}/${SYSOUT_FILE_PATTERN}")
-                    listOfSysOutFiles.each { String fileMetaData ->
+                    listOfSysOutFiles.each { fileMetaData ->
                         def sysOut = readFile file: "${WORKSPACE}/${fileMetaData.path}", encoding: "UTF-8"
                         println sysOut
                     }
