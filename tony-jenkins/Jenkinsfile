@@ -38,12 +38,12 @@ pipeline {
 			name: 'APPLICATION_LOAD_VALUE',
 			defaultValue: '',
 			description: 'Enter the application load value'
-        ),
+        )
 		string (
 			name: 'USER_LOAD_VALUE',
 			defaultValue: '',
 			description: 'Enter the user load value'
-        ),        
+        )    
 	}
 
     stages {
