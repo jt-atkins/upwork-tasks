@@ -79,7 +79,8 @@ pipeline {
                         println "Executing ${fileMetaData.path}"
                         try {
                             def testcaseJSON = readJSON file: "${fileMetaData.path}"
-                            testcaseJSON.testcases.each {
+                            println testcaseJSON.testCases
+                            testcaseJSON.testCases.each {
                                 println it.id
                             }
                         }catch(err) {
