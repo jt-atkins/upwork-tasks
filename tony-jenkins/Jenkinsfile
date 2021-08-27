@@ -40,9 +40,9 @@ pipeline {
 			description: 'Enter the application load value'
         ),
 		string (
-			name: 'APPLICATION_LOAD_VALUE',
+			name: 'USER_LOAD_VALUE',
 			defaultValue: '',
-			description: 'Enter the application load value'
+			description: 'Enter the user load value'
         ),        
 	}
 
