@@ -1,8 +1,17 @@
-def INTEGRATION_FOLDER = "base/integration" 
-def INTEGRATION_FILE_PATTERN = "*.T2"
+// import com.ibm.dbb.repository.*
+// import com.ibm.dbb.dependency.*
+// import com.ibm.dbb.build.*
+// import groovy.transform.*
+
+// import groovy.json.JsonSlurper
+// import groovy.util.XmlParser
+// import groovy.util.XmlSlurper
+
+def INTEGRATION_FOLDER = "base/integration-test-case" 
+def INTEGRATION_FILE_PATTERN = "*.json"
 
 def SYSOUT_FOLDER = "output" 
-def SYSOUT_FILE_PATTERN = "*.out" 
+def SYSOUT_FILE_PATTERN = "*.bzumsg" 
 def JENKINS_AGENT_LABEL = "agent"
 
 def isFolderExist(folderName) {
@@ -11,8 +20,7 @@ def isFolderExist(folderName) {
 }
 
 def loadFiles(filePattern,excludes="") {
-    def files = sh(script: "find ${WORKSPACE} -name '${filePattern}'",returnStdout: true)
-    return files.split("\n")
+    return findFiles(glob: "${filePattern}", excludes: "${excludes}")
 }
 
 def listOfFiles
@@ -29,7 +37,13 @@ pipeline {
 		string (
 			name: 'APPLICATION_LOAD_VALUE',
 			defaultValue: '',
-			description: 'Enter the application load value')
+			description: 'Enter the application load value'
+        ),
+		string (
+			name: 'APPLICATION_LOAD_VALUE',
+			defaultValue: '',
+			description: 'Enter the application load value'
+        ),        
 	}
 
     stages {
@@ -38,7 +52,7 @@ pipeline {
             steps {
                 script {
                     cleanWs()
-                    checkout([$class: 'GitSCM',branches: [[name: "main"]],doGenerateSubmoduleConfigurations: false,
+                    checkout([$class: 'GitSCM',branches: [[name: scm.branches[0].name]],doGenerateSubmoduleConfigurations: false,
                     gitTool: 'Default',
                     submoduleCfg: [],userRemoteConfigs: [[url: "https://github.com/ashokhein/upwork-tasks"]]   ])   
                 }
@@ -54,10 +68,10 @@ pipeline {
                         currentBuild.result = 'FAILURE'
                         error("Job failure to due to integration folder doesn't exist.")
                     }
-                    listOfFiles = loadFiles("${INTEGRATION_FILE_PATTERN}")
+                    listOfFiles = loadFiles("**/${INTEGRATION_FOLDER}/${INTEGRATION_FILE_PATTERN}")
                     println "List of fileName"
                     listOfFiles.each { String  fileMetaData ->
-                        sh "basename ${fileMetaData}"
+                        println fileMetaData.name
                     }
                 }
             }
@@ -71,28 +85,9 @@ pipeline {
                 script {
                     failedScript = false 
                     listOfFiles.each { String fileMetaData ->
-                        fileMetaData = fileMetaData.trim()
-                        println "Executing ${fileMetaData}"
-                        fileName = sh(script: "basename ${fileMetaData}",returnStdout: true)
-                        fileName = fileName.trim()
-                        def jcl = """
-                            HELLO  JOB ,
-                            MSGCLASS=H,MSGLEVEL=(1,1),TIME=(,4),REGION=0M
-                            STEP0001 EXEC PGM=IEBGENER
-                            SYSIN    DD ${fileName}
-                            SYSPRINT DD ${APPLICATION_LOAD_VALUE}
-                            SYSUT2   DD SYSOUT=*
-                        """   
+                        println "Executing ${fileMetaData.path}"
                         try {
-                            //new JCLExec().text(jcl).confDir("${WORKSPACE}").execute()
-                            // jclExec.saveOutput('SYSPRINT',  new File("${WORKSPACE}/output/${fileMetaData.name}_sysprint.out"), "UTF-8")                                             
                             
-                            //For Testing Output
-                            // writeFile file: "${WORKSPACE}/${SYSOUT_FOLDER}/${fileMetaData.name}_sysprint.out", text: "${jcl}"
-                            sh """
-                                touch ${WORKSPACE}/${SYSOUT_FOLDER}/${fileName}_sysprint.out
-                                echo '${jcl}' > ${WORKSPACE}/${SYSOUT_FOLDER}/${fileName}_sysprint.out
-                            """
                         }catch(err) {
                             failedScript = true
                             println "${err}"
@@ -104,6 +99,7 @@ pipeline {
                 }
             }
         }        
+ 
 
         stage('Print SysOut') {
             steps {
@@ -115,9 +111,10 @@ pipeline {
                         currentBuild.result = 'FAILURE'
                         error("Job failure to due to sys out folder doesn't exist.")                        
                     }
-                    listOfSysOutFiles = loadFiles("${SYSOUT_FILE_PATTERN}")
+                    listOfSysOutFiles = loadFiles("**/${SYSOUT_FOLDER}/${SYSOUT_FILE_PATTERN}")
                     listOfSysOutFiles.each { String fileMetaData ->
-                        sh "cat ${fileMetaData}"
+                        def sysOut = readFile file: "${WORKSPACE}/${fileMetaData.path}", encoding: "UTF-8"
+                        println sysOut
                     }
                 }
             }
