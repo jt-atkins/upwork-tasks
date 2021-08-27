@@ -81,7 +81,7 @@ pipeline {
                             def testcaseJSON = readJSON file: "${fileMetaData.path}"
                             println testcaseJSON.testCases
                             testcaseJSON.testCases.each {
-                                def .test-case-file. = it.name
+                                def testCaseName = it.name
                             }
                         }catch(err) {
                             failedScript = true
