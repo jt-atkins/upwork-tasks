@@ -61,7 +61,7 @@ pipeline {
                     }
                     listOfFiles = loadFiles("**/${INTEGRATION_FOLDER}/${INTEGRATION_FILE_PATTERN}")
                     println "List of fileName"
-                    listOfFiles.each { String  fileMetaData ->
+                    listOfFiles.each { fileMetaData ->
                         println fileMetaData.name
                     }
                 }
@@ -75,13 +75,25 @@ pipeline {
             steps {
                 script {
                     failedScript = false 
-                    listOfFiles.each { String fileMetaData ->
+                    listOfFiles.each { fileMetaData ->
                         println "Executing ${fileMetaData.path}"
                         try {
                             def testcaseJSON = readJSON file: "${fileMetaData.path}"
-                            println testcaseJSON.testCases
-                            testcaseJSON.testCases.each {
-                                def testCaseName = it.name
+                            testcaseJSON.testCases.each { testCase -> 
+                                def testCaseName = testCase.name
+                                def testCaseFile = testCase.dataset
+                                def testCaseDescription = testCase.description
+                                def testedPrograms = []
+                                testCase.transactions.each { tx ->
+                                    println tx
+                                    testedPrograms.addAll(tx.programs)
+                                }
+                                println "TestCaseName : ${testCaseName}"
+                                println "TestCaseFile : ${testCaseFile}"
+                                println "TestCaseDescription : ${testCaseDescription}"
+                                println "TestedPrograms : ${testedPrograms}"
+                                println "ApplicationLoadValue : ${APPLICATION_LOAD_VALUE}"
+                                println "UserLoadValue : ${USER_LOAD_VALUE}"
                             }
                         }catch(err) {
                             failedScript = true
