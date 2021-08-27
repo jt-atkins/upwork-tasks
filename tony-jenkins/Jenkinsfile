@@ -78,8 +78,10 @@ pipeline {
                     listOfFiles.each { String fileMetaData ->
                         println "Executing ${fileMetaData.path}"
                         try {
-                            def testcase = readJSON file: "${fileMetaData.path}"
-                            println testcase 
+                            def testcaseJSON = readJSON file: "${fileMetaData.path}"
+                            testcaseJSON.testcases.each {
+                                println it.id
+                            }
                         }catch(err) {
                             failedScript = true
                             println "${err}"
