@@ -82,9 +82,9 @@ pipeline {
                             // def reader = new BufferedReader(new InputStreamReader(new FileInputStream("${fileMetaData.path}"), 'UTF-8'))
                             // def testcaseJSON = jsonSlurper.parse(reader)  
                             // def testcaseJSON = readJSON file: "${fileMetaData.path}"
-                            def testcaseJSON = sh(script: "cat ${WORKSPACE}/${fileMetaData.path} | jq '.testcaseJSON' ",returnStdout: true)
+                            def testcaseJSON = sh(script: "cat ${WORKSPACE}/${fileMetaData.path} | jq '.testCases' ",returnStdout: true)
                             println testcaseJSON
-                            testcaseJSON.testCases.each { testCase -> 
+                            testcaseJSON.each { testCase -> 
                                 def testCaseName = testCase.name
                                 def testCaseFile = testCase.dataset
                                 def testCaseDescription = testCase.description
