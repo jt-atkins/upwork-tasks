@@ -1,4 +1,6 @@
-def JCL_EXEC_GROOVY_SCRIPT_LOCATION="${WORKSPACE}/tony-jenkins"
+import groovy.json.*
+
+def JCL_EXEC_GROOVY_SCRIPT_LOCATION="tony-jenkins"
 
 def INTEGRATION_FOLDER = "tony-jenkins/base/integration-test-case" 
 def INTEGRATION_FILE_PATTERN = "*.json"
@@ -79,7 +81,12 @@ pipeline {
                     listOfFiles.each { fileMetaData ->
                         println "Executing ${fileMetaData.path}"
                         try {
-                            def testcaseJSON = readJSON file: "${fileMetaData.path}"
+                            // def jsonSlurper = new JsonSlurper()
+                            // def reader = new BufferedReader(new InputStreamReader(new FileInputStream("${fileMetaData.path}"), 'UTF-8'))
+                            // def testcaseJSON = jsonSlurper.parse(reader)  
+                            // def testcaseJSON = readJSON file: "${fileMetaData.path}"
+                            def testcaseJSON = sh(script: "cat ${WORKSPACE}/${fileMetaData.path} | jq",returnStdout: true)
+                            println testcaseJSON
                             testcaseJSON.testCases.each { testCase -> 
                                 def testCaseName = testCase.name
                                 def testCaseFile = testCase.dataset
