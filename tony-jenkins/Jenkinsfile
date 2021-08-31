@@ -72,10 +72,7 @@ pipeline {
             }
         }
 
-        stage('Exec JCL Script') {
-            agent {
-                label "${JENKINS_AGENT_LABEL}"
-            }            
+        stage('Exec JCL Script') {       
             steps {
                 script {
                     listOfFiles.each { fileMetaData ->
