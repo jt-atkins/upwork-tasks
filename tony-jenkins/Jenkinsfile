@@ -31,12 +31,12 @@ pipeline {
 	parameters {
 		string (
 			name: 'APPLICATION_LOAD_VALUE',
-			defaultValue: '',
+			defaultValue: 'ALOAD',
 			description: 'Enter the application load value'
         )
 		string (
 			name: 'USER_LOAD_VALUE',
-			defaultValue: '',
+			defaultValue: 'ULOAD',
 			description: 'Enter the user load value'
         )    
 	}
