@@ -7,7 +7,7 @@ def INTEGRATION_FILE_PATTERN = "*.json"
 
 def SYSOUT_FOLDER = "output" 
 def SYSOUT_FILE_PATTERN = "*.bzumsg" 
-def JENKINS_AGENT_LABEL = "agent"
+def JENKINS_AGENT_LABEL = "vagrant"
 
 def isFolderExist(folderName) {
   folderExist = fileExists file: "${folderName}"
