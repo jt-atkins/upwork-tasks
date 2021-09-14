@@ -1,13 +1,57 @@
 import groovy.json.*
+def jsonContent='''
+{
+   "testCases":[
+      {
+         "id":"",
+         "type":"CICS",
+         "name":"DEFECT ITEM: ZPROJ-112",
+         "description":"RECORDINGS:\nSSC1 TRANSACTION - RECORDED PRODUCTION ISSUE FOR INQUIRE CUSTOMER FUNCTION",
+         "dataset":"DMJTA1.DEFECT.DOB",
+         "dateRecorded":"2021222092757000",
+         "transactions":[
+            {
+               "name":"SSC1",
+               "maps":[
+                  "SSMAPC1"
+               ],
+               "mapSets":[
+                  "SSMAP  "
+               ],
+               "db2Subsystems":[
+                  "DSN0"
+               ],
+               "programs":[
+                  "LGTESTC1",
+                  "LGICUS01",
+                  "LGICDB01"
+               ],
+               "transactions":[
+                  "SSC1"
+               ]
+            }
+         ],
+         "createdBy":"TK"
+      }
+   ]
+}
+'''
 
-def JCL_EXEC_GROOVY_SCRIPT_LOCATION="tony-jenkins"
+
+@NonCPS
+def parseJSONText(String jsonText) {
+    final slurper = new JsonSlurperClassic()
+    return new HashMap<>(slurper.parseText(jsonText.trim()))
+}
+ 
+def JCL_EXEC_GROOVY_SCRIPT_LOCATION="/u/DMJTA1/groovy"
 
 def INTEGRATION_FOLDER = "tony-jenkins/base/integration-test-case" 
 def INTEGRATION_FILE_PATTERN = "*.json"
 
-def SYSOUT_FOLDER = "output" 
+def SYSOUT_FOLDER = "/u/DMJTA1/vtp/work" 
 def SYSOUT_FILE_PATTERN = "*.bzumsg" 
-def JENKINS_AGENT_LABEL = "agent"
+def JENKINS_AGENT_LABEL = "SC47-agent"
 
 def isFolderExist(folderName) {
   folderExist = fileExists file: "${folderName}"
@@ -24,19 +68,21 @@ def userInputParams
 def reviewYesOrNo = false
 def emailAddress 
 
+def jsonVar = []
+
 pipeline {
 
-    agent any
+    agent { label "${JENKINS_AGENT_LABEL}" }
     
 	parameters {
 		string (
 			name: 'APPLICATION_LOAD_VALUE',
-			defaultValue: 'ALOAD',
+			defaultValue: 'DMJTA1.LOAD',
 			description: 'Enter the application load value'
         )
 		string (
 			name: 'USER_LOAD_VALUE',
-			defaultValue: 'ULOAD',
+			defaultValue: 'DMJTA1.TEST.LOAD',
 			description: 'Enter the user load value'
         )    
 	}
@@ -47,7 +93,7 @@ pipeline {
             steps {
                 script {
                     cleanWs()
-                    checkout([$class: 'GitSCM',branches: [[name: scm.branches[0].name]],doGenerateSubmoduleConfigurations: false,
+                    checkout([$class: 'GitSCM',branches: [[name: "feature/tony-upwork"]],doGenerateSubmoduleConfigurations: false,
                     gitTool: 'Default',
                     submoduleCfg: [],userRemoteConfigs: [[url: "https://github.com/ashokhein/upwork-tasks"]]   ])   
                 }
@@ -71,20 +117,18 @@ pipeline {
                 }
             }
         }
+        
 
-        stage('Exec JCL Script') {       
+
+        stage('Exec JCL Script') {
+             
             steps {
                 script {
-                    listOfFiles.each { fileMetaData ->
+                        listOfFiles.each { fileMetaData ->
                         println "Executing ${fileMetaData.path}"
                         try {
-                            // def jsonSlurper = new JsonSlurper()
-                            // def reader = new BufferedReader(new InputStreamReader(new FileInputStream("${fileMetaData.path}"), 'UTF-8'))
-                            // def testcaseJSON = jsonSlurper.parse(reader)  
-                            // def testcaseJSON = readJSON file: "${fileMetaData.path}"
-                            def testcaseJSON = sh(script: "cat ${WORKSPACE}/${fileMetaData.path} | jq '.testCases' ",returnStdout: true)
-                            println testcaseJSON
-                            testcaseJSON.each { testCase -> 
+                            def testcaseJSON = parseJSONText(jsonContent)  
+                            testcaseJSON.testCases.each { testCase -> 
                                 def testCaseName = testCase.name
                                 def testCaseFile = testCase.dataset
                                 def testCaseDescription = testCase.description
@@ -98,8 +142,9 @@ pipeline {
                                 println "TestedPrograms : ${testedPrograms}"
                                 println "ApplicationLoadValue : ${APPLICATION_LOAD_VALUE}"
                                 println "UserLoadValue : ${USER_LOAD_VALUE}"
-                                groovyz "${JCL_EXEC_GROOVY_SCRIPT_LOCATION}/jclexec.groovy -p ${testCaseFile} -c ${WORKSPACE} -l ${APPLICATION_LOAD_VALUE} -w ${WORKSPACE}/${SYSOUT_FOLDER}"  
+                                sh script: '/u/DMJTA1/dbb109fix/bin/groovyz /u/DMJTA1/groovy/2vtp_jcl.groovy -p DMJTA1.DEFECT.DOB -c /u/DMJTA1/vtp -l DMJTA1.LOAD -w /u/DMJTA1/vtp/work', returnStatus: true 
                             }
+                            testcaseJSON = null
                         }catch(err) {
                             println "${err}"
                         }
@@ -114,7 +159,7 @@ pipeline {
             steps {
                 script {
                     unstash 'sysoutput'
-                    isSysOutFolderExist = isFolderExist("${WORKSPACE}/${SYSOUT_FOLDER}")
+                    isSysOutFolderExist = isFolderExist("${SYSOUT_FOLDER}")
                     if(!isSysOutFolderExist) {
                         println "Sys out folder doesn't exist"
                         currentBuild.result = 'FAILURE'
@@ -122,7 +167,7 @@ pipeline {
                     }
                     listOfSysOutFiles = loadFiles("**/${SYSOUT_FOLDER}/${SYSOUT_FILE_PATTERN}")
                     listOfSysOutFiles.each { fileMetaData ->
-                        def sysOut = readFile file: "${WORKSPACE}/${fileMetaData.path}", encoding: "UTF-8"
+                        def sysOut = readFile file: "${fileMetaData.path}", encoding: "UTF-8"
                         println sysOut
                     }
                 }
